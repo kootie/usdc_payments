@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# USDC Payment System for Base Mainnet
 
-## Getting Started
+A comprehensive payment system built on Base Mainnet that enables businesses to accept USDC payments, manage loyalty points, and offer discounts.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- USDC Payment Router for handling payments
+- Beacon Points loyalty system
+- Business Registry for managing merchant information
+- Discount Engine for promotions
+- QR Code payment generation
+- Mapbox integration for business discovery
+- Sendy delivery integration for Kenya
+
+## Prerequisites
+
+- Node.js 16+
+- PostgreSQL 12+
+- MetaMask or other Web3 wallet
+- Base Mainnet RPC URL
+
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# Database configuration
+DATABASE_URL="postgresql://postgres:password@localhost:5432/usdc_locator"
+
+# Private key of the deployer wallet (without 0x prefix)
+PRIVATE_KEY=your_private_key_here
+
+# BaseScan API key for contract verification
+BASESCAN_API_KEY=your_basescan_api_key_here
+
+# Mapbox API key for geolocation features
+MAPBOX_API_KEY=your_mapbox_api_key_here
+
+# Sendy API credentials
+SENDY_API_KEY=your_sendy_api_key_here
+SENDY_API_URL=https://api.sendy.co.ke/v1
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install PostgreSQL if you haven't already
+2. Create a PostgreSQL user with the following credentials:
+   - Username: postgres
+   - Password: password
+3. Run the database setup script:
+```bash
+node scripts/setup-db.js
+```
+4. Initialize Prisma:
+```bash
+npx prisma generate
+npx prisma db push
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Smart Contracts
 
-## Learn More
+The system consists of four main smart contracts:
 
-To learn more about Next.js, take a look at the following resources:
+1. `USDCPaymentRouter.sol`: Handles USDC payments and routing
+2. `BeaconPoints.sol`: Manages loyalty points system
+3. `BusinessRegistry.sol`: Stores business information and products
+4. `DiscountEngine.sol`: Handles promotions and discounts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Installation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd <repository-name>
+```
 
-## Deploy on Vercel
+2. Install dependencies:
+```bash
+npm install
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. Set up the database:
+```bash
+node scripts/setup-db.js
+npx prisma generate
+npx prisma db push
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Deploy contracts to Base Mainnet:
+```bash
+npx hardhat run scripts/deploy.js --network base
+```
+
+## Development
+
+1. Start the development server:
+```bash
+npm run dev
+```
+
+2. Run tests:
+```bash
+npx hardhat test
+```
+
+## Contract Addresses
+
+After deployment, the following contracts will be available on Base Mainnet:
+
+- USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- USDCPaymentRouter: [Deployed Address]
+- BeaconPoints: [Deployed Address]
+- BusinessRegistry: [Deployed Address]
+- DiscountEngine: [Deployed Address]
+
+## Security
+
+- All contracts use OpenZeppelin's security features
+- ReentrancyGuard is implemented for critical functions
+- Access control is managed through Ownable pattern
+- Circuit breakers are implemented for emergency situations
+
+## License
+
+MIT
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request

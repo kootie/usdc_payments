@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id          String   @id @default(uuid())
+  name        String
+  address     String
+  location    Json     // Stores latitude and longitude
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  products    Product[]
+  orders      Order[]
+  discounts   Discount[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float    // Price in USDC
+  imageUrl    String?
+  isAvailable Boolean  @default(true)
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+  orderItems  OrderItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id])
+  customerId    String
+  status        OrderStatus @default(PENDING)
+  totalAmount   Float
+  discountAmount Float      @default(0)
+  pointsEarned  Int        @default(0)
+  items         OrderItem[]
+  delivery      Delivery?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Delivery {
+  id            String         @id @default(uuid())
+  orderId       String         @unique
+  order         Order          @relation(fields: [orderId], references: [id])
+  status        DeliveryStatus @default(PENDING)
+  sendyOrderId  String?
+  trackingUrl   String?
+  estimatedTime DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Discount {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  percentage      Float
+  startDate       DateTime
+  endDate         DateTime
+  minimumPurchase Float?
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id])
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model User {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  points        Int      @default(0)
+  totalSpent    Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERING
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  ACCEPTED
+  PICKED_UP
+  DELIVERING
+  DELIVERED
+  CANCELLED
+} 
