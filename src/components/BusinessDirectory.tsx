@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useAccount, useContractRead, useContractWrite, useWaitForTransaction } from 'wagmi';
 import WalletConnect from '@/components/WalletConnect';
 import { parseUnits, formatUnits } from 'viem';
 import Image from 'next/image';
@@ -149,7 +149,6 @@ const ProductCard = ({
   onBuy, 
   isProcessing, 
   isConfirming, 
-  isPending, 
   isConnected, 
   isBalanceLoading, 
   balance,
@@ -160,7 +159,6 @@ const ProductCard = ({
   onBuy: (product: Product) => void;
   isProcessing: boolean;
   isConfirming: boolean;
-  isPending: boolean;
   isConnected: boolean;
   isBalanceLoading: boolean;
   balance: bigint | undefined;
@@ -195,11 +193,11 @@ const ProductCard = ({
               <p className="font-semibold text-gray-900">{product.price} USDC</p>
               {isBalanceLoading ? (
                 <p className="text-sm text-gray-500">Loading balance...</p>
-              ) : balance && (
+              ) : (typeof balance === 'bigint') ? (
                 <p className="text-sm text-gray-500">
                   Balance: {formatUnits(balance, 6)} USDC
                 </p>
-              )}
+              ) : null}
               <button 
                 onClick={handleBuyClick}
                 disabled={isTransactionInProgress || !isConnected || isBalanceLoading}
@@ -232,59 +230,34 @@ export default function BusinessDirectory() {
   const [isTransactionInProgress, setIsTransactionInProgress] = useState(false);
 
   // Read USDC balance
-  const { data: balance, isLoading: isBalanceLoading } = useReadContract({
-    address: USDC_ADDRESS,
+  const { data: balance, isLoading: isBalanceLoading } = useContractRead({
+    address: USDC_ADDRESS as `0x${string}`,
     abi: USDC_ABI,
     functionName: 'balanceOf',
     args: [address as `0x${string}`],
-    query: {
-      enabled: !!address && isMounted,
-    },
+    enabled: !!address,
   });
 
-  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract({
-    mutation: {
-      onError: (error) => {
-        console.error('Transaction error:', error);
-        setError(error.message);
-        setIsProcessing(false);
-        setIsTransactionInProgress(false);
-      }
-    }
+  const { write: transfer, data: transferData } = useContractWrite({
+    address: USDC_ADDRESS as `0x${string}`,
+    abi: USDC_ABI,
+    functionName: 'transfer',
   });
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash,
-    onSuccess: () => {
-      setIsProcessing(false);
-      setIsTransactionInProgress(false);
-    },
-    onError: (error) => {
-      console.error('Transaction confirmation error:', error);
-      setError(error.message);
-      setIsProcessing(false);
-      setIsTransactionInProgress(false);
-    }
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransaction({
+    hash: transferData?.hash,
   });
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (writeError) {
-      setError(writeError.message);
-      setIsTransactionInProgress(false);
-    }
-  }, [writeError]);
-
   const handleBuy = async (product: Product) => {
-    if (!selectedBusiness || !writeContract || !address) {
+    if (!selectedBusiness || !transfer || !address) {
       setError('Please connect your wallet first');
       return;
     }
 
-    // Prevent multiple transactions
     if (isTransactionInProgress) {
       return;
     }
@@ -295,38 +268,19 @@ export default function BusinessDirectory() {
       setIsTransactionInProgress(true);
       setSelectedProduct(product);
 
-      const amount = parseUnits(product.price.toString(), 6); // USDC has 6 decimals
+      const amount = parseUnits(product.price.toString(), 6);
 
-      // Check if user has enough balance
-      if (balance && balance < amount) {
+      if (typeof balance === 'bigint' && balance < amount) {
         setError('Insufficient USDC balance');
         setIsProcessing(false);
         setIsTransactionInProgress(false);
         return;
       }
 
-      console.log('Sending transaction for product:', {
-        product: product.name,
-        to: selectedBusiness.address,
-        amount: amount.toString(),
-        from: address,
-        balance: balance ? formatUnits(balance, 6) : '0'
+      await transfer({
+        args: [selectedBusiness.address as `0x${string}`, amount]
       });
-
-      // Transfer USDC directly to the business
-      const transferResult = await writeContract({
-        address: USDC_ADDRESS,
-        abi: USDC_ABI,
-        functionName: 'transfer',
-        args: [
-          selectedBusiness.address as `0x${string}`,
-          amount
-        ]
-      });
-
-      console.log('Transfer transaction sent for product:', product.name, transferResult);
     } catch (error) {
-      console.error('Error processing payment for product:', product.name, error);
       setError(error instanceof Error ? error.message : 'Error processing payment. Please try again.');
       setIsProcessing(false);
       setIsTransactionInProgress(false);
@@ -434,10 +388,10 @@ export default function BusinessDirectory() {
                     onBuy={handleBuy}
                     isProcessing={isProcessing}
                     isConfirming={isConfirming}
-                    isPending={isPending}
                     isConnected={isConnected}
                     isBalanceLoading={isBalanceLoading}
                     balance={balance}
+                    isTransactionInProgress={isTransactionInProgress}
                   />
                 ))}
               </div>

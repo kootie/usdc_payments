@@ -1,28 +1,39 @@
 'use client';
 
-import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider, getDefaultWallets } from '@rainbow-me/rainbowkit';
+import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@rainbow-me/rainbowkit/styles.css';
+import { publicProvider } from 'wagmi/providers/public';
 
-const config = getDefaultConfig({
-  appName: 'USDC Payment System',
+const { chains, publicClient } = configureChains(
+  [base],
+  [publicProvider()]
+);
+
+const { connectors } = getDefaultWallets({
+  appName: 'Business Directory',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
-  chains: [base],
-  ssr: true
+  chains
+});
+
+const config = createConfig({
+  autoConnect: true,
+  publicClient,
+  connectors
 });
 
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
+    <WagmiConfig config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <RainbowKitProvider chains={chains}>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </WagmiConfig>
   );
 } 
